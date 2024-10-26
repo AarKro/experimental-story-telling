@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
+</head>
+<body>
+<script src="{%STATIC_PATH%}index.js"></script>
+<script src="{%STATIC_PATH%}mobile-app/boot.js"></script>
+<script src="{%STATIC_PATH%}mobile-app/download-adapter.js"></script>
+<script type="text/javascript">
+    function getPixelRatio() {
+        if (typeof window.devicePixelRatio === 'undefined') {
+            return 1;
+        } else {
+            return window.devicePixelRatio > 1.3 ? 2 : 1;
+        }
+    }
+
+    function postAppMessage(msg) {
+        if (typeof window.webkit !== 'undefined') {
+            if (typeof window.webkit.messageHandlers.appInterface !== 'undefined') {
+                window.webkit.messageHandlers.appInterface.postMessage(msg)
+            }
+        }
+        if (typeof window.appInterface !== 'undefined') {
+            window.appInterface.postMessage(JSON.stringify(msg))
+        }
+    }
+
+    let metas = document.getElementsByTagName('meta');
+
+    for (let i = 0; i < metas.length; i++) {
+        if (metas[i].name === 'viewport') {
+            document.head.removeChild(metas[i]);
+        }
+    }
+
+    let content = ('initial-scale=' + (1 / getPixelRatio()) + ', maximum-scale=' + (1 / getPixelRatio()) + ', user-scalable=no, minimal-ui');
+
+    let meta = document.createElement('meta');
+    meta.name = 'viewport';
+    meta.content = content;
+    document.getElementsByTagName('head')[0].appendChild(meta);
+
+    (async function(){
+        const publication = await startPublication({
+            ASSETS_PATH: '{%ASSETS_PATH%}',
+            STATIC_PATH: '{%STATIC_PATH%}',
+            BASE_URL: '{%BASE_URL%}',
+            START_PAGE: '{%START_PAGE%}',
+            ICON_COLOR: '{%ICON_COLOR%}',
+            HEADER_COLOR: '{%HEADER_COLOR%}'
+        });
+
+        publication.api.on('log', (e) => {
+            postAppMessage({'event': 'log', object: e})
+        });
+        publication.api.on('bookStateChanged', (e) => {
+            postAppMessage({'event': 'bookStateChanged', object: e})
+        });
+        publication.api.on('panelStateChanged', (e) => {
+            postAppMessage({'event': 'panelStateChanged', object: e})
+        });
+        publication.api.on('onSidebarClose', (e) => {
+            postAppMessage({'event': 'onSidebarClose', object: e})
+        });
+        publication.api.on('preloader-off', (e) => {
+            postAppMessage({'event': 'preloaderOff', object: e})
+        });
+        publication.api.on('popupStateChanged', (e) => {
+            postAppMessage({'event': 'popupStateChanged', object: e})
+        });
+
+        window.publication = publication;
+
+        postAppMessage({'event': 'Flipbook Loaded'});
+    })();
+</script>
+</body>
+</html>
+
